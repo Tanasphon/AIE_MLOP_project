@@ -251,7 +251,50 @@ def build():
     add_card(slide, 7.0, 4.05, 5.2, 1.35, "ข้อสังเกต", "Latency ของ ONNX Quantized ดีกว่า ONNX ปกติในเครื่องทดสอบ", ORANGE)
     add_footer(slide, 7)
 
-    # 8 API and validation
+    # 8 Result source
+    slide = prs.slides.add_slide(blank)
+    add_title(slide, "ที่มาของข้อมูลและผลลัพธ์", "อธิบายว่าตัวเลขในสไลด์มาจากการทดสอบส่วนใด")
+    add_table(slide, [
+        ["ผลลัพธ์", "ที่มา", "นำไปใช้ในสไลด์"],
+        ["Model Size", "ขนาดไฟล์โมเดลในโฟลเดอร์ models", "เปรียบเทียบ PyTorch / ONNX / Quantized"],
+        ["Latency", "จับเวลาการ inference ด้วยรูปภาพ benchmark.png", "ประเมินความเร็วของแต่ละ runtime"],
+        ["Prediction", "เรียก endpoint /predict ด้วยรูปภาพจริง", "ยืนยันว่า API ใช้งานได้จริง"],
+        ["Load Test", "ส่ง request พร้อมกันหลายรายการ", "วิเคราะห์ throughput และ P95 latency"],
+    ], 0.8, 1.6, 11.7, 2.7, font_size=10)
+    add_bullets(slide, [
+        "รูปภาพทดสอบเป็นภาพแมวจาก Hugging Face documentation-images",
+        "ผลลัพธ์ benchmark ถูกบันทึกไว้ใน models/benchmark_results.json",
+        "ผล API ยืนยันจาก JSON response ที่มี model: apple/mobilevit-small และ runtime: onnx-quantized",
+    ], y=4.75, size=16)
+    add_footer(slide, 8)
+
+    # 9 Model measurement methodology
+    slide = prs.slides.add_slide(blank)
+    add_title(slide, "วิธีวัดประสิทธิภาพของโมเดล")
+    add_card(slide, 0.8, 1.55, 3.8, 1.35, "1. Baseline", "โหลดโมเดล PyTorch ต้นฉบับและวัดขนาด/เวลา inference", RGBColor(232, 242, 250))
+    add_card(slide, 4.8, 1.55, 3.8, 1.35, "2. ONNX", "แปลงโมเดลเป็น ONNX แล้ววัด latency ด้วย ONNX Runtime", RGBColor(232, 242, 250))
+    add_card(slide, 8.8, 1.55, 3.8, 1.35, "3. Quantized", "ทำ Dynamic Quantization และวัดผลซ้ำด้วย input เดียวกัน", RGBColor(232, 242, 250))
+    add_table(slide, [
+        ["Metric", "ความหมาย", "เหตุผลที่ใช้วัด"],
+        ["Model Size", "ขนาดไฟล์โมเดล", "ดูว่า optimization ลดขนาดได้เท่าไร"],
+        ["Average Latency", "เวลา inference เฉลี่ย", "ดูความเร็วโดยรวม"],
+        ["P95 Latency", "เวลาที่ 95% ของ request ไม่เกินค่านี้", "ดูความเสถียรของ response time"],
+    ], 1.0, 3.75, 11.3, 1.65, font_size=10)
+    add_footer(slide, 9)
+
+    # 10 API/load measurement methodology
+    slide = prs.slides.add_slide(blank)
+    add_title(slide, "วิธีวัดประสิทธิภาพของ API")
+    add_bullets(slide, [
+        "ทดสอบ API ด้วย Docker เพื่อให้ใกล้เคียงสภาพแวดล้อม deploy จริง",
+        "ส่งไฟล์รูปภาพจริงเข้า endpoint /predict และตรวจว่า response เป็น JSON ที่ถูกต้อง",
+        "ทดสอบ error handling ด้วยไฟล์ที่ไม่ใช่รูปภาพ เพื่อดูว่า API ตอบ 400 Bad Request",
+        "ทดสอบโหลดด้วย concurrent requests เพื่อดู throughput, average latency และ P95 latency",
+        "ใช้ Error % เป็นตัวบอกว่าระบบเริ่มรับโหลดไม่ไหวหรือไม่",
+    ], size=18)
+    add_footer(slide, 10)
+
+    # 11 API and validation
     slide = prs.slides.add_slide(blank)
     add_title(slide, "API และ Error Handling")
     add_bullets(slide, [
@@ -261,9 +304,9 @@ def build():
         "ตอบกลับ 400 Bad Request เมื่อ input ไม่ถูกต้อง",
         "ตอบกลับ 413 Request Entity Too Large เมื่อไฟล์ใหญ่เกินกำหนด",
     ], size=19)
-    add_footer(slide, 8)
+    add_footer(slide, 11)
 
-    # 9 Testing
+    # 12 Testing
     slide = prs.slides.add_slide(blank)
     add_title(slide, "ผลการทดสอบ API")
     add_card(slide, 0.9, 1.55, 3.5, 1.3, "Unit Test", "ผ่าน 3/3 tests", GREEN)
@@ -274,9 +317,9 @@ def build():
         ["sample_images/benchmark.png", "tabby cat, Egyptian cat, tiger cat"],
         ["ไฟล์ text/plain", "400 Bad Request"],
     ], 1.2, 3.6, 10.8, 1.25)
-    add_footer(slide, 9)
+    add_footer(slide, 12)
 
-    # 10 Load test
+    # 13 Load test
     slide = prs.slides.add_slide(blank)
     add_title(slide, "ผลการทดสอบโหลด")
     add_table(slide, [
@@ -292,9 +335,9 @@ def build():
         "ระบบตอบสนองครบทุก request ในชุดทดสอบขนาดเล็ก",
         "เมื่อเพิ่ม threads มากขึ้น latency จะสูงขึ้นตามภาระ CPU",
     ], y=5.0, size=17)
-    add_footer(slide, 10)
+    add_footer(slide, 13)
 
-    # 11 CI/CD
+    # 14 CI/CD
     slide = prs.slides.add_slide(blank)
     add_title(slide, "CI/CD Pipeline")
     stages = [("Push Code", "GitHub"), ("Install", "Dependencies"), ("Test", "pytest"), ("Deploy", "Hugging Face Spaces")]
@@ -308,9 +351,9 @@ def build():
         "รัน unit test ทุกครั้งที่ push หรือ pull request ไปยัง main",
         "รองรับ auto-deploy เมื่อกำหนด HF_TOKEN และ HF_SPACE_REPO_ID",
     ], y=4.15, size=18)
-    add_footer(slide, 11)
+    add_footer(slide, 14)
 
-    # 12 Live demo
+    # 15 Live demo
     slide = prs.slides.add_slide(blank)
     add_title(slide, "Live Demo: API บน Docker")
     if SAMPLE_IMAGE.exists():
@@ -323,9 +366,9 @@ def build():
     add_card(slide, 5.65, 1.55, 6.6, 1.2, "ขั้นตอน Demo", "เปิด Docker API → ส่งรูปภาพ → ตรวจ JSON response", LIGHT_BLUE, 17, 15)
     add_card(slide, 5.65, 3.15, 6.6, 1.2, "ผลลัพธ์ที่ได้", "model: apple/mobilevit-small | runtime: onnx-quantized", GREEN, 17, 14)
     add_card(slide, 5.65, 4.75, 6.6, 1.2, "Top Predictions", "tabby cat, Egyptian cat, tiger cat", ORANGE, 17, 14)
-    add_footer(slide, 12)
+    add_footer(slide, 15)
 
-    # 13 Deliverables
+    # 16 Deliverables
     slide = prs.slides.add_slide(blank)
     add_title(slide, "Deliverables ที่จัดทำ")
     add_bullets(slide, [
@@ -336,9 +379,9 @@ def build():
         "Postman Collection และ JMeter Test Plan",
         "รายงาน PDF และสไลด์นำเสนอ",
     ], size=20)
-    add_footer(slide, 13)
+    add_footer(slide, 16)
 
-    # 14 Summary
+    # 17 Summary
     slide = prs.slides.add_slide(blank)
     add_title(slide, "สรุปผล")
     add_bullets(slide, [
@@ -352,7 +395,7 @@ def build():
     p.text = "ขอบคุณครับ / ค่ะ"
     p.alignment = PP_ALIGN.CENTER
     set_run(p.runs[0], size=28, bold=True, color=NAVY)
-    add_footer(slide, 14)
+    add_footer(slide, 17)
 
     prs.save(OUTPUT_PATH)
     prs.save(PROJECT_OUTPUT_PATH)
