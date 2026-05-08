@@ -5,3 +5,4 @@ onnx
 optimum[onnxruntime]
 pytest
 httpx
+reportlab
