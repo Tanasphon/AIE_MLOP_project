@@ -1,0 +1,43 @@
+{
+  "info": {
+    "name": "MobileViT Image Classification API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:7860"
+    },
+    {
+      "key": "image_path",
+      "value": "sample_images/benchmark.png"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/health"
+      }
+    },
+    {
+      "name": "Predict Image",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "file",
+              "type": "file",
+              "src": "{{image_path}}"
+            }
+          ]
+        },
+        "url": "{{base_url}}/predict?top_k=5"
+      }
+    }
+  ]
+}

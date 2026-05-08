@@ -1,0 +1,25 @@
+{
+  "model_id": "apple/mobilevit-small",
+  "sample_image": "sample_images\\benchmark.png",
+  "runs": 5,
+  "results": [
+    {
+      "runtime": "pytorch",
+      "model_size_mb": 21.44,
+      "latency_avg_ms": 34.43,
+      "latency_p95_ms": 37.51
+    },
+    {
+      "runtime": "onnx",
+      "model_size_mb": 21.49,
+      "latency_avg_ms": 55.58,
+      "latency_p95_ms": 63.64
+    },
+    {
+      "runtime": "onnx-quantized",
+      "model_size_mb": 11.56,
+      "latency_avg_ms": 47.0,
+      "latency_p95_ms": 56.47
+    }
+  ]
+}
