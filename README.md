@@ -1,53 +1,49 @@
-# High-Throughput Image Classification Service
+# ระบบจำแนกรูปภาพประสิทธิภาพสูงด้วย FastAPI และ MobileViT
 
-FastAPI image classification service for the MLOps assignment using `apple/mobilevit-small` from Hugging Face.
+โปรเจกต์นี้จัดทำขึ้นสำหรับรายวิชา MLOps โดยมีวัตถุประสงค์เพื่อพัฒนา API สำหรับจำแนกรูปภาพที่สามารถรองรับการเรียกใช้งานพร้อมกันได้ และมีการปรับแต่งโมเดลให้มีขนาดเล็กลงด้วย ONNX และ Dynamic Quantization
 
-## Team
+## สมาชิกกลุ่ม
 
 - นายธนัสถ์ภณ อ่างทอง `1650901034`
 - นายจีฮาน สุทธินิพนธ์นาม `1650904152`
 - นายอกัณห์ เกษเพชร `1650904269`
 
-## Model
+## โมเดลที่ใช้
 
-The project uses `apple/mobilevit-small`, a lightweight image classification model that combines CNN-style local feature extraction with Transformer-style global context. It is a good fit for high-throughput CPU inference because it is smaller than many classic CNN baselines while keeping strong accuracy.
+โมเดลที่ใช้ในโปรเจกต์นี้คือ `apple/mobilevit-small` จาก Hugging Face ซึ่งเป็นโมเดล Image Classification ที่ผสมแนวคิดของ CNN และ Transformer เข้าด้วยกัน จุดเด่นคือมีขนาดไม่ใหญ่มาก เหมาะกับงาน inference ที่ต้องการความเร็ว และสามารถนำไปใช้งานในระบบที่มีทรัพยากรจำกัดได้ดี
 
-## Architecture
+ในระบบจริง API จะเลือกใช้โมเดลเวอร์ชัน `ONNX Quantized` เป็นหลัก เพื่อช่วยลดขนาดไฟล์โมเดลและลดภาระการประมวลผลบน CPU
+
+## ภาพรวมสถาปัตยกรรมระบบ
 
 ```mermaid
 flowchart LR
     Client[Client / Postman / JMeter] --> API[FastAPI /predict]
-    API --> Validate[File Validation]
+    API --> Validate[ตรวจสอบไฟล์รูปภาพ]
     Validate --> Pool[ProcessPoolExecutor]
     Pool --> Model[ONNX Quantized Model]
-    Model --> Response[JSON Predictions]
+    Model --> Response[ผลลัพธ์ JSON]
     GitHub[GitHub Actions] --> Tests[pytest]
     Tests --> Deploy[Hugging Face Spaces]
 ```
 
-The API is asynchronous at the request layer and sends CPU-bound inference work to a process pool so concurrent requests do not freeze the server event loop.
+API พัฒนาด้วย FastAPI และใช้ `async def` สำหรับรับ request ส่วนงาน inference ซึ่งเป็นงานแบบ CPU-bound จะถูกส่งไปประมวลผลผ่าน `ProcessPoolExecutor` เพื่อป้องกันไม่ให้ API ค้างเมื่อมีการเรียกใช้งานพร้อมกันหลาย request
 
-## Project Structure
+## โครงสร้างโปรเจกต์
 
 ```text
-app/                  FastAPI application
-scripts/              ONNX export, quantization, and benchmark script
-tests/                pytest API tests
-models/               Generated model artifacts
-postman/              Postman collection
-jmeter/               JMeter load test plan
-.github/workflows/    CI/CD workflow
+app/                  โค้ดหลักของ FastAPI
+scripts/              สคริปต์สำหรับ export ONNX, quantization และ benchmark
+tests/                ชุดทดสอบด้วย pytest
+models/               ไฟล์โมเดลและผล benchmark
+postman/              Postman Collection สำหรับทดสอบ API
+jmeter/               JMeter Test Plan สำหรับทดสอบโหลด
+.github/workflows/    Workflow สำหรับ CI/CD
 ```
 
-## Local Setup
+## การติดตั้งและใช้งานบนเครื่อง
 
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-```
-
-On Windows PowerShell:
+สำหรับ Windows PowerShell ให้ใช้คำสั่งดังนี้
 
 ```powershell
 python -m venv .venv
@@ -55,118 +51,152 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
-Use `requirements.txt` for API runtime and Docker. For model export, quantization, and tests, install the development dependencies:
+ไฟล์ `requirements.txt` ใช้สำหรับรัน API และ Docker ส่วนกรณีที่ต้องการ export โมเดล ทำ quantization หรือรัน unit test ให้ติดตั้ง dependencies เพิ่มเติมด้วยคำสั่ง
 
-```bash
+```powershell
 pip install -r requirements-dev.txt
 ```
 
-## Model Optimization
+## การปรับแต่งโมเดล
 
-Run the optimization and benchmark script:
+สามารถรันสคริปต์สำหรับ export โมเดลเป็น ONNX, ทำ Dynamic Quantization และ benchmark ได้ด้วยคำสั่ง
 
-```bash
-python scripts/optimize_model.py --runs 20
+```powershell
+python scripts\optimize_model.py --runs 20
 ```
 
-The script will:
+ขั้นตอนที่สคริปต์ดำเนินการประกอบด้วย
 
-- Download/use `apple/mobilevit-small`
-- Export the model to ONNX
-- Apply dynamic quantization to MatMul/Gemm layers
-- Benchmark PyTorch, ONNX, and quantized ONNX
-- Save results to `models/benchmark_results.json`
+- ดาวน์โหลดหรือโหลดโมเดล `apple/mobilevit-small`
+- แปลงโมเดลจาก PyTorch เป็น ONNX
+- ทำ Dynamic Quantization เฉพาะ layer ประเภท `MatMul` และ `Gemm`
+- ทดสอบ latency ของ PyTorch, ONNX และ ONNX Quantized
+- บันทึกผลไว้ที่ `models/benchmark_results.json`
 
-Use the JSON result in the project report to compare model size, average latency, and P95 latency for PyTorch, ONNX, and ONNX Quantized runtimes.
+ผล benchmark ที่ได้จากการทดสอบบนเครื่องนี้มีดังนี้
 
-## Run API
+- PyTorch: ขนาดโมเดล `21.44 MB`, latency เฉลี่ย `34.43 ms`, P95 `37.51 ms`
+- ONNX: ขนาดโมเดล `21.49 MB`, latency เฉลี่ย `55.58 ms`, P95 `63.64 ms`
+- ONNX Quantized: ขนาดโมเดล `11.56 MB`, latency เฉลี่ย `47.00 ms`, P95 `56.47 ms`
 
-```bash
-uvicorn app.main:app --host 0.0.0.0 --port 7860
-```
+จากผลการทดสอบพบว่า ONNX Quantized สามารถลดขนาดไฟล์โมเดลลงได้ประมาณ 46% เมื่อเทียบกับ ONNX ปกติ และมี latency ดีขึ้นกว่า ONNX ปกติบนเครื่องที่ใช้ทดสอบ
 
-Health check:
+## การรัน API ด้วย Docker
 
-```bash
-curl http://localhost:7860/health
-```
+สร้าง Docker image ด้วยคำสั่ง
 
-Prediction:
-
-```bash
-curl -X POST "http://localhost:7860/predict?top_k=5" \
-  -F "file=@sample_images/benchmark.png"
-```
-
-## Docker
-
-Build and run locally:
-
-```bash
+```powershell
 docker build -t mobilevit-api .
+```
+
+รัน API ด้วยคำสั่ง
+
+```powershell
 docker run --rm -p 7860:7860 mobilevit-api
 ```
 
-Then call:
+หลังจากรันคำสั่งนี้ API จะเปิดให้ใช้งานที่ `http://127.0.0.1:7860`
 
-```bash
-curl -X POST "http://localhost:7860/predict?top_k=5" \
-  -F "file=@sample_images/benchmark.png"
+## ตัวอย่างการเรียกใช้งาน API
+
+ตรวจสอบสถานะของระบบ
+
+```powershell
+curl.exe http://127.0.0.1:7860/health
 ```
 
-## Tests
+เรียกใช้งาน endpoint สำหรับจำแนกรูปภาพ
 
-```bash
+```powershell
+curl.exe -X POST "http://127.0.0.1:7860/predict?top_k=3" -F "file=@sample_images/benchmark.png"
+```
+
+ตัวอย่างผลลัพธ์ที่ได้
+
+```json
+{
+  "model": "apple/mobilevit-small",
+  "runtime": "onnx-quantized",
+  "top_k": 3,
+  "predictions": [
+    {
+      "label": "tabby, tabby cat",
+      "score": 0.18672767281532288
+    }
+  ]
+}
+```
+
+## การทดสอบระบบ
+
+รัน unit test ด้วยคำสั่ง
+
+```powershell
 pytest -q
 ```
 
-The tests verify:
+ชุดทดสอบที่จัดทำไว้ตรวจสอบประเด็นหลักดังนี้
 
-- `/health` returns JSON
-- `/predict` accepts a valid image and returns prediction JSON
-- `/predict` rejects invalid file types with a client error
+- endpoint `/health` สามารถตอบกลับ JSON ได้ถูกต้อง
+- endpoint `/predict` สามารถรับไฟล์รูปภาพและตอบกลับผลการทำนายได้
+- endpoint `/predict` ปฏิเสธไฟล์ที่ไม่ใช่รูปภาพด้วย HTTP status code ที่เหมาะสม
+
+ผลการทดสอบล่าสุด
+
+```text
+3 passed
+```
+
+## การทดสอบโหลดด้วย JMeter
+
+โปรเจกต์มีไฟล์ JMeter Test Plan อยู่ที่
+
+```text
+jmeter/mobilevit-load-test.jmx
+```
+
+ก่อนรัน JMeter ต้องเปิด API ด้วย Docker ให้เรียบร้อยก่อน จากนั้นเปิดไฟล์ `.jmx` ใน Apache JMeter และกดปุ่ม Start เพื่อเริ่มทดสอบโหลด
+
+ค่าที่ควรนำไปวิเคราะห์ในรายงาน ได้แก่
+
+- จำนวน request ทั้งหมด
+- Error %
+- Throughput
+- Average Latency
+- P95 Latency
+
+จากการทดสอบโหลดเบื้องต้นด้วย concurrent requests จำนวน 30 request และ concurrency 10 ได้ผลดังนี้
+
+```text
+success: 30/30
+throughput: 10.32 requests/second
+average latency: 874.90 ms
+P95 latency: 1187.96 ms
+```
+
+## การจัดการ Error Handling
+
+API มีการตรวจสอบ input และจัดการ error ที่สำคัญดังนี้
+
+- กรณีไฟล์ไม่ใช่ JPEG, PNG หรือ WebP จะตอบกลับ `400 Bad Request`
+- กรณีไฟล์ว่างเปล่า จะตอบกลับ `400 Bad Request`
+- กรณีไฟล์เสียหรือไม่สามารถเปิดเป็นรูปภาพได้ จะตอบกลับ `400 Bad Request`
+- กรณีไฟล์มีขนาดใหญ่เกินกำหนด จะตอบกลับ `413 Request Entity Too Large`
+- กรณีเกิดข้อผิดพลาดระหว่าง inference จะตอบกลับ `500 Internal Server Error`
 
 ## CI/CD
 
-The workflow in `.github/workflows/ci-cd.yml` runs tests on every push and pull request. On push to `main`, it deploys to Hugging Face Spaces if all tests pass.
+ระบบ CI/CD ถูกกำหนดไว้ที่ไฟล์ `.github/workflows/ci-cd.yml` โดย workflow จะรัน unit test ทุกครั้งที่มีการ push หรือ pull request ไปยัง branch `main`
 
-Required GitHub secrets:
+หากต้องการ deploy ไปยัง Hugging Face Spaces อัตโนมัติ ต้องกำหนด GitHub Secrets ดังนี้
 
-- `HF_TOKEN`: Hugging Face access token
-- `HF_SPACE_REPO_ID`: Space repo id, for example `username/mobilevit-api`
+- `HF_TOKEN` คือ Hugging Face access token
+- `HF_SPACE_REPO_ID` คือชื่อ repository ของ Hugging Face Space เช่น `username/mobilevit-api`
 
-For Hugging Face Spaces, create a Docker Space and push this repository. The `Dockerfile` starts the API on port `7860`.
+## ตัวอย่าง cURL สำหรับ API บน Cloud
 
-## Load Testing
+เมื่อ deploy ไปยัง Hugging Face Spaces แล้ว สามารถเรียกใช้งาน API ได้โดยเปลี่ยน URL เป็น URL ของ Space จริง
 
-Run the API locally, then run JMeter:
-
-```bash
-jmeter -n -t jmeter/mobilevit-load-test.jmx \
-  -Jhost=localhost \
-  -Jport=7860 \
-  -Jimage_path=sample_images/benchmark.png \
-  -l jmeter/results/results.jtl \
-  -e -o jmeter/report
-```
-
-Open `jmeter/report/index.html` and capture throughput, average latency, and P95 latency for the report.
-
-## Error Handling
-
-The API validates:
-
-- Unsupported content type: `400 Bad Request`
-- Empty file: `400 Bad Request`
-- Corrupted or non-image file: `400 Bad Request`
-- Oversized file: `413 Request Entity Too Large`
-- Unexpected inference failure: `500 Internal Server Error`
-
-## Cloud cURL Template
-
-Replace the base URL with your Hugging Face Space URL:
-
-```bash
-curl -X POST "https://YOUR-USERNAME-YOUR-SPACE.hf.space/predict?top_k=5" \
-  -F "file=@sample_images/benchmark.png"
+```powershell
+curl.exe -X POST "https://YOUR-USERNAME-YOUR-SPACE.hf.space/predict?top_k=3" -F "file=@sample_images/benchmark.png"
 ```
