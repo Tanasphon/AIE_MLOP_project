@@ -22,15 +22,21 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements-dev.txt
+          pip install -r requirements.txt pytest httpx
 
       - name: Run unit tests
         run: pytest -q
+
+      - name: Build Docker image
+        run: docker build -t mobilevit-api:test .
 
   deploy:
     needs: test
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
+    env:
+      HF_TOKEN: ${{ secrets.HF_TOKEN }}
+      HF_SPACE_REPO_ID: ${{ secrets.HF_SPACE_REPO_ID }}
 
     steps:
       - name: Checkout
@@ -42,12 +48,11 @@ jobs:
           python-version: "3.11"
 
       - name: Install Hugging Face Hub
+        if: env.HF_TOKEN != '' && env.HF_SPACE_REPO_ID != ''
         run: pip install huggingface_hub
 
       - name: Deploy to Hugging Face Spaces
-        env:
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
-          HF_SPACE_REPO_ID: ${{ secrets.HF_SPACE_REPO_ID }}
+        if: env.HF_TOKEN != '' && env.HF_SPACE_REPO_ID != ''
         run: |
           python - <<'PY'
           import os
@@ -70,3 +75,8 @@ jobs:
               ],
           )
           PY
+
+      - name: Skip deploy when secrets are missing
+        if: env.HF_TOKEN == '' || env.HF_SPACE_REPO_ID == ''
+        run: |
+          echo "HF_TOKEN or HF_SPACE_REPO_ID is not configured. Test and Docker build passed; deployment was skipped."
