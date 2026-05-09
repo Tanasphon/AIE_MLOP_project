@@ -9,6 +9,8 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: .
 
     steps:
       - name: Checkout
@@ -25,7 +27,7 @@ jobs:
           pip install -r requirements.txt pytest httpx
 
       - name: Run unit tests
-        run: pytest -q
+        run: python -m pytest -q
 
       - name: Build Docker image
         run: docker build -t mobilevit-api:test .
